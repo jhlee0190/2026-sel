@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎍 우리 가족 설날 게임 🎍</title>
+<style>
+body { 
+  font-family: sans-serif; 
+  text-align:center; 
+  background: linear-gradient(to bottom, #fff5cc, #ffdddd);
+}
+h1 { color:#b30000; }
+.section { 
+  margin:20px; 
+  padding:20px; 
+  border-radius:20px; 
+  background:white; 
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+button { 
+  padding:10px 20px; 
+  margin:10px; 
+  font-size:16px; 
+  border-radius:10px;
+  border:none;
+  background:#ff6666;
+  color:white;
+}
+input { padding:8px; margin:5px; }
+</style>
+</head>
+<body>
+
+<h1>🎍 설날 가족 미니 게임 🎍</h1>
+
+<div class="section">
+<h2>🔮 올해 운세</h2>
+<input id="name" placeholder="이름 입력">
+<button onclick="fortune()">운세 보기</button>
+<p id="fortuneResult"></p>
+</div>
+
+<div class="section">
+<h2>⚖️ 밸런스 게임</h2>
+<p>1억 받기 vs 평생 설거지 면제</p>
+<button onclick="vote('1억')">1억</button>
+<button onclick="vote('설거지 면제')">설거지 면제</button>
+<p id="voteResult"></p>
+</div>
+
+<div class="section">
+<h2>🙏 세배 점수 랭킹</h2>
+<input id="scoreName" placeholder="이름">
+<input id="scoreValue" type="number" placeholder="점수">
+<button onclick="addScore()">추가</button>
+<ul id="ranking"></ul>
+</div>
+
+<script>
+function fortune(){
+let name=document.getElementById("name").value;
+let fortunes=[
+"올해는 금전운이 활짝 열립니다 💰",
+"가족과의 유대가 깊어지는 해 ❤️",
+"뜻밖의 귀인이 나타납니다 ✨",
+"건강운이 최고조입니다 🏃"
+];
+let random=fortunes[Math.floor(Math.random()*fortunes.length)];
+document.getElementById("fortuneResult").innerText=name+"님의 운세: "+random;
+}
+
+function vote(choice){
+document.getElementById("voteResult").innerText="선택: "+choice;
+}
+
+let scores=[];
+function addScore(){
+let name=document.getElementById("scoreName").value;
+let score=parseInt(document.getElementById("scoreValue").value);
+scores.push({name,score});
+scores.sort((a,b)=>b.score-a.score);
+let list="";
+scores.forEach(s=>{ list+="<li>"+s.name+" - "+s.score+"점</li>"; });
+document.getElementById("ranking").innerHTML=list;
+}
+</script>
+
+</body>
+</html>
