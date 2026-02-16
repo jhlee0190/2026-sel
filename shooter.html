@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1" />
   <title>설날 미니게임: 만두도둑 퇴치</title>
   <style>
     :root { color-scheme: light; }
@@ -24,4 +24,308 @@
     .btn:active{ transform:translateY(1px); }
     .btn.secondary{ background:#2b6cb0; box-shadow:0 6px 14px rgba(43,108,176,.2); }
     canvas{
-      width:100%; height:auto; back
+      width:100%; height:auto; background:#ffffff; border-radius:18px;
+      box-shadow:0 10px 30px rgba(0,0,0,.10);
+      touch-action:none;
+    }
+    .help{ font-size:13px; opacity:.85; line-height:1.5; }
+    .help kbd{ background:#f3f3f3; border:1px solid #ddd; padding:2px 6px; border-radius:6px; font-weight:700; }
+    footer{ text-align:center; padding:14px 0 18px; opacity:.7; font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="font-size:20px;font-weight:900;">🎍 설날 미니게임: 만두도둑 퇴치 🥟💦</div>
+    <div class="sub">물총(레이저)로 다가오는 만두도둑을 막아보자! (가족용 · 잔혹표현 없음)</div>
+  </header>
+
+  <div class="wrap">
+    <div class="panel">
+      <div class="left">
+        <span class="badge">점수: <span id="score">0</span></span>
+        <span class="badge">목숨: <span id="life">3</span></span>
+        <span class="badge">레벨: <span id="level">1</span></span>
+        <span class="badge">최고점수: <span id="best">0</span></span>
+      </div>
+      <div class="right">
+        <button class="btn" id="startBtn">시작 / 재시작</button>
+        <button class="btn secondary" id="pauseBtn">일시정지</button>
+      </div>
+    </div>
+
+    <canvas id="game" width="900" height="520"></canvas>
+
+    <div class="panel">
+      <div class="help">
+        조작:
+        PC는 <kbd>←</kbd><kbd>→</kbd> 이동, <kbd>Space</kbd> 발사, <kbd>P</kbd> 일시정지<br/>
+        모바일은 화면 드래그로 이동 + 화면 탭하면 발사
+      </div>
+    </div>
+
+    <footer>© 2026 family mini game — GitHub Pages에 올리면 QR로 바로 접속 가능</footer>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const lifeEl  = document.getElementById('life');
+  const levelEl = document.getElementById('level');
+  const bestEl  = document.getElementById('best');
+
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+
+  let running = false;
+  let paused = false;
+  let score = 0;
+  let life = 3;
+  let level = 1;
+
+  const bestKey = 'seollal_shooter_best';
+  let best = Number(localStorage.getItem(bestKey) || 0);
+  bestEl.textContent = best;
+
+  const player = {
+    x: canvas.width/2,
+    y: canvas.height - 60,
+    r: 18,
+    speed: 520,
+    cooldown: 0,
+  };
+
+  const bullets = [];
+  const enemies = [];
+  let spawnTimer = 0;
+
+  function reset() {
+    score = 0; life = 3; level = 1;
+    bullets.length = 0;
+    enemies.length = 0;
+    player.x = canvas.width/2;
+    player.cooldown = 0;
+    spawnTimer = 0;
+    running = true;
+    paused = false;
+    syncHUD();
+  }
+
+  function syncHUD() {
+    scoreEl.textContent = score;
+    lifeEl.textContent = life;
+    levelEl.textContent = level;
+    bestEl.textContent = best;
+  }
+
+  function updateLevel() {
+    const newLevel = 1 + Math.floor(score / 15);
+    if (newLevel !== level) {
+      level = newLevel;
+      levelEl.textContent = level;
+    }
+  }
+
+  function spawnEnemy() {
+    const r = 16 + Math.random()*10;
+    const x = r + Math.random() * (canvas.width - 2*r);
+    const y = -r - 10;
+    const baseSpeed = 70 + Math.random()*40;
+    const speed = baseSpeed + (level-1)*18;
+    enemies.push({ x, y, r, speed });
+  }
+
+  function shoot() {
+    if (!running || paused) return;
+    if (player.cooldown > 0) return;
+
+    bullets.push({
+      x: player.x,
+      y: player.y - player.r - 6,
+      r: 6,
+      vy: -520
+    });
+    player.cooldown = Math.max(0.12, 0.22 - (level-1)*0.01);
+  }
+
+  function dist2(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
+  function collide(a,b){ const rr = (a.r+b.r); return dist2(a,b) <= rr*rr; }
+
+  const keys = new Set();
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); shoot(); }
+    if (e.key.toLowerCase() === 'p') togglePause();
+    keys.add(e.code);
+  });
+  window.addEventListener('keyup', (e) => keys.delete(e.code));
+
+  let pointerDown = false;
+  let pointerId = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    pointerDown = true; pointerId = e.pointerId;
+    moveByPointer(e);
+    shoot();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!pointerDown || e.pointerId !== pointerId) return;
+    moveByPointer(e);
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    if (e.pointerId === pointerId) { pointerDown = false; pointerId = null; }
+  });
+
+  function moveByPointer(e){
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+    player.x = Math.max(player.r, Math.min(canvas.width - player.r, px));
+  }
+
+  startBtn.addEventListener('click', reset);
+  pauseBtn.addEventListener('click', togglePause);
+  function togglePause(){
+    if (!running) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? '재개' : '일시정지';
+  }
+
+  let last = performance.now();
+  function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+    if (!running || paused) { render(); return; }
+
+    let dir = 0;
+    if (keys.has('ArrowLeft') || keys.has('KeyA')) dir -= 1;
+    if (keys.has('ArrowRight') || keys.has('KeyD')) dir += 1;
+    player.x += dir * player.speed * dt;
+    player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
+
+    player.cooldown = Math.max(0, player.cooldown - dt);
+
+    const spawnInterval = Math.max(0.35, 1.05 - (level-1)*0.08);
+    spawnTimer += dt;
+    while (spawnTimer >= spawnInterval) {
+      spawnTimer -= spawnInterval;
+      spawnEnemy();
+    }
+
+    for (let i=bullets.length-1;i>=0;i--){
+      bullets[i].y += bullets[i].vy * dt;
+      if (bullets[i].y < -20) bullets.splice(i,1);
+    }
+
+    for (let i=enemies.length-1;i>=0;i--){
+      enemies[i].y += enemies[i].speed * dt;
+      if (enemies[i].y > canvas.height + 40){
+        enemies.splice(i,1);
+        life -= 1;
+        if (life <= 0){
+          gameOver();
+          return;
+        }
+        syncHUD();
+      }
+    }
+
+    for (let ei=enemies.length-1; ei>=0; ei--){
+      const e = enemies[ei];
+      for (let bi=bullets.length-1; bi>=0; bi--){
+        const b = bullets[bi];
+        if (collide(e,b)){
+          enemies.splice(ei,1);
+          bullets.splice(bi,1);
+          score += 1;
+          if (score > best){
+            best = score;
+            localStorage.setItem(bestKey, String(best));
+          }
+          updateLevel();
+          syncHUD();
+          break;
+        }
+      }
+    }
+
+    render();
+  }
+
+  function gameOver(){
+    running = false;
+    paused = false;
+    pauseBtn.textContent = '일시정지';
+    render(true);
+  }
+
+  function render(over=false){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle = '#fff3cc';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#ffe6e6';
+    ctx.fillRect(0,0,canvas.width,60);
+
+    ctx.fillStyle = '#b30000';
+    ctx.font = 'bold 18px system-ui';
+    ctx.fillText('🥟 만두도둑을 막아라! (물총 💦)', 14, 38);
+
+    ctx.beginPath();
+    ctx.fillStyle = '#2b6cb0';
+    ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('💦', player.x, player.y+5);
+    ctx.textAlign = 'start';
+
+    for (const b of bullets){
+      ctx.beginPath();
+      ctx.fillStyle = '#00a3ff';
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    for (const e of enemies){
+      ctx.beginPath();
+      ctx.fillStyle = '#ff6666';
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('🥟', e.x, e.y+5);
+      ctx.textAlign = 'start';
+    }
+
+    if (!running){
+      overlay('시작 버튼을 눌러 게임 시작!');
+    } else if (paused){
+      overlay('일시정지 (P 또는 버튼)');
+    } else if (over){
+      overlay(`게임 오버! 점수 ${score}점\n“시작/재시작”으로 다시 도전`);
+    }
+  }
+
+  function overlay(text){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 28px system-ui';
+    const lines = String(text).split('\n');
+    lines.forEach((ln, i) => ctx.fillText(ln, canvas.width/2, canvas.height/2 + i*36));
+    ctx.restore();
+  }
+
+  render();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+
