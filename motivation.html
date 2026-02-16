@@ -3,67 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎍 설날 동기부여 명언 🎍</title>
-
+<title>설날 동기부여 명언</title>
 <style>
 body{
   margin:0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: linear-gradient(to bottom, #fff3cc, #ffe6e6);
+  font-family:sans-serif;
+  background:linear-gradient(to bottom,#fff3cc,#ffe6e6);
   display:flex;
   justify-content:center;
   align-items:center;
   height:100vh;
   text-align:center;
-  transition:background 1s ease;
 }
-
 .container{
   background:white;
-  padding:40px 30px;
+  padding:40px;
   border-radius:20px;
   box-shadow:0 10px 30px rgba(0,0,0,0.15);
   max-width:600px;
 }
-
-h1{
-  color:#b30000;
-  margin-bottom:20px;
-}
-
+h1{ color:#b30000; }
 .quote{
   font-size:20px;
-  font-weight:600;
+  font-weight:bold;
+  margin-top:20px;
   min-height:80px;
-  transition:opacity 0.5s ease;
 }
-
 button{
   margin-top:20px;
   padding:10px 20px;
-  font-size:16px;
   border:none;
   border-radius:10px;
   background:#ff6666;
   color:white;
   cursor:pointer;
 }
-
-button:hover{
-  background:#e05555;
-}
 </style>
 </head>
-
 <body>
 
 <div class="container">
 <h1>✨ 오늘의 설날 명언 ✨</h1>
-<div class="quote" id="quote"></div>
-<button onclick="nextQuote()">다음 명언</button>
+<div class="quote" id="quote">로딩중...</div>
+<button id="btn">다음 명언</button>
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function(){
+
 const quotes = [
 "오늘의 작은 노력이 내일의 큰 변화를 만든다.",
 "가족은 인생에서 가장 든든한 자산이다.",
@@ -80,3 +67,43 @@ const quotes = [
 "가족의 응원은 어떤 어려움도 이겨내게 한다.",
 "오늘의 결심이 인생의 방향을 바꾼다.",
 "실패를 두려워하지 말고 멈추는 것을 두려워하라.",
+"인생은 속도가 아니라 방향이다.",
+"행복은 조건이 아니라 선택이다.",
+"노력은 배신하지 않는다.",
+"자신을 믿는 순간 이미 절반은 성공이다.",
+"도전은 두려움을 이기는 가장 빠른 방법이다.",
+"오늘 웃는 사람이 내일도 웃는다.",
+"힘든 순간이 지나면 더 단단해진다.",
+"시작이 반이다, 지금 바로 시작하자.",
+"말 한마디가 하루의 분위기를 바꾼다.",
+"꿈은 크게, 실천은 꾸준히.",
+"가족과 함께하는 시간은 가장 값진 투자다.",
+"변화는 불편함 속에서 시작된다.",
+"잘하고 있다는 말 한마디가 기적을 만든다.",
+"넘어져도 괜찮다, 다시 일어나면 된다.",
+"새해는 또 하나의 기회다."
+];
+
+let index = Math.floor(Math.random() * quotes.length);
+const quoteEl = document.getElementById("quote");
+const btn = document.getElementById("btn");
+
+function showQuote(){
+  quoteEl.textContent = quotes[index];
+}
+
+function nextQuote(){
+  index = (index + 1) % quotes.length;
+  showQuote();
+}
+
+showQuote();
+setInterval(nextQuote, 6000);
+btn.addEventListener("click", nextQuote);
+
+});
+</script>
+
+</body>
+</html>
+
